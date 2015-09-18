@@ -22,7 +22,7 @@ Mini setup & howto
 
 4. Run `install-debian.sh` or don't - just make sure you have dependencies ready.
 
-5. `./mevr.sh up` fast or `./mevr.sh watchdog&`
+5. `./mevr.sh up fast` or `./mevr.sh watchdog&`
 
 6. Check `ifconfig`/`ps` if the tunnels are there
 
