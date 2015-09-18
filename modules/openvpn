@@ -1,0 +1,51 @@
+#!/bin/bash
+
+dependencies_depends "dependencies"
+dependencies_depends "routes"
+dependencies_register_module "openvpn"
+
+# open openvpn connections
+function openvpn_open_connections
+{
+    tun=0
+    for group in `ls $CONFIG_DIR/vpns/`
+    do
+        if [[ -d $CONFIG_DIR/vpns/$group ]]
+        then
+            limit=`cat $CONFIG_DIR/vpns/$group/group_settings | grep limit | awk '{print $2}'`
+            if [[ $limit == "" ]]
+            then
+                limit=`ls $CONFIG_DIR/vpns/$group/*.ovpn | grep -c ovpn`
+            fi
+            ltun=1
+            for vpn in `ls $CONFIG_DIR/vpns/$group/*.ovpn | sort --random-sort`
+                do
+                if [[ $ltun -le $limit ]]
+                then
+                    echo -n "Connecting to $vpn (expecting interface tun$tun) [ $ltun / $limit ]"
+		            $(cd $CONFIG_DIR/vpns/$group/; $openvpn --dev tun${tun} ${PERSIST_OPTS} --config $vpn > "$LOG_DIR/${vpn//$CONFIG_DIR\/vpns\/$group\//_log_}" &)
+                    timeout=0
+                    while [[ `$ip route | grep -c tun${tun}` -lt 2 && $timeout -lt $TIMEOUT_VALUE ]]
+                    do
+                        echo -n "."
+                        sleep 1
+                        timeout=`expr $timeout + 1`
+                    done
+                    echo ""
+                    if [[ $timeout -ge $TIMEOUT_VALUE ]]
+                    then
+                        pid=`ps aux | grep "openvpn --dev tun${tun} ${PERSIST_OPTS} --config $vpn" | grep -v "grep" | awk '{print $2}'`
+                        echo "Timeout! killing process {$pid}"
+                        kill -9 $pid
+                    else
+                        tun=`expr $tun + 1`
+                        ltun=`expr $ltun + 1`
+                    fi
+                    sleep 2
+                    routes_clean_routes
+                fi
+            done
+        fi
+    done
+    routes_clean_routes
+}

@@ -15,6 +15,7 @@ mkdir $CONFIG_DIR
 mkdir $LOG_DIR
 cp -r config/* $CONFIG_DIR
 cp -r . $SCRIPT_DIR
+cp -r vars/* $SCRIPT_DIR
 rm -rf $SCRIPT_DIR/config
 ln -s /sbin/mevr/mevr.sh /sbin/mevr/mevr
 

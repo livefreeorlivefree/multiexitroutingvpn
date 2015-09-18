@@ -1,0 +1,126 @@
+#!/bin/bash
+
+dependencies_depends "dependencies"
+dependencies_depends "iptables"
+dependencies_depends "openvpn"
+dependencies_depends "routes"
+dependencies_register_module "merv"
+
+function merv_up()
+{
+    ping $PING_HOST -c 1 > /dev/null
+    if [[ $? != 0 ]]
+    then
+        service networking restart
+    fi
+    routes_copy_route main legit
+
+    openvpn_open_connections
+
+    routes_clean_routes
+
+    $ip route del default
+
+    if [[ $1 != 'fast-nocache' ]]
+    then
+	if [[ $1 != 'fast' ]]
+	then
+	    routes_setup_gateways_simple
+	else
+	    routes_setup_gateways_fast
+	fi
+    else
+	routes_setup_gateways_fast # cache would be nice, eh?
+    fi
+    $ip route del default 2>/dev/null
+
+    routes_copy_route main outerfaces
+    $ip route add table outerfaces default scope global $defaultGW
+    $ip rule del lookup outerfaces 2>/dev/null
+    $ip rule add lookup outerfaces
+    $ip rule del fwmark $MARK_CONST table legit 2>/dev/null
+    $ip rule add fwmark $MARK_CONST table legit
+
+    iptables_setup_marks
+
+    if [[ $2 == 'noisemaker' ]]
+    then
+	    merv_noisemaker
+    fi
+}
+
+function merv_down
+{
+    killall openvpn
+    routes_copy_route legit main
+    $ip rule del lookup outerfaces
+    $ip route flush table legit
+    $iptables -t mangle -F # TODO: SAVE PREV RULES
+}
+
+function merv_cycle()
+{
+    merv_down;
+    merv_up fast;
+}
+
+function merv_heartbeat()
+{
+    openvpns=`ps ax | grep -v grep | grep -c openvpn`
+    if [[ $openvpns -le 1 ]]
+    then
+        merv_cycle
+        exit 0
+    fi
+
+    ping -c 1 $PING_HOST > /dev/null
+    if [[ $? -ne 0 ]]
+    then
+        merv_cycle
+        exit 0
+    fi
+}
+
+# main function
+function merv_main()
+{
+    if [[ $1 == 'up' ]]
+    then
+        merv_up "$2" "$3"
+	exit 0
+    fi
+    if [[ $1 == 'down' ]]
+    then
+        merv_down
+        exit 0
+    fi
+    if [[ $1 == 'heartbeat' ]]
+    then
+        merv_heartbeat
+        exit 0
+    fi
+    if [[ $1 == 'cycle' ]]
+    then
+        merv_cycle
+        exit 0
+    fi
+    if [[ $1 == 'watchdog' ]]
+    then
+	while true
+	do
+	    merv_heartbeat
+	    sleep 30
+	done
+	exit 0
+    fi
+    echo "Usage: ./mevr.sh up [fast|fast-nocache] [noisemaker]|down|heartbeat|cycle|watchdog"
+    exit 254
+}
+
+#makes some noise on your free time
+function merv_noisemaker
+{
+
+    echo "Not implemented yet (noisemaker)"
+    exit 200
+}

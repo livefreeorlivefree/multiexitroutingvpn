@@ -1,0 +1,31 @@
+#!/bin/bash
+
+dependencies_depends "dependencies"
+dependencies_register_module "iptables"
+
+function iptables_setup_marks
+{
+    $iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+
+    $iptables -t mangle -F
+    for dest in `cat $CONFIG_DIR/legit_destinations`
+    do
+        $iptables -t mangle -A PREROUTING -d $dest -j MARK --set-mark $MARK_CONST
+    done
+
+    for uid in `cat $CONFIG_DIR/legit_uids`
+    do
+	$iptables -t mangle -A OUTPUT -m owner --uid-owner $uid -j MARK --set-mark $MARK_CONST
+    done
+
+    for gid in `cat $CONFIG_DIR/legit_gids`
+    do
+        $iptables -t mangle -A OUTPUT -m owner --gid-owner $gid -j MARK --set-mark $MARK_CONST
+    done
+
+    for pair in `cat $CONFIG_DIR/legit_local_ports`
+    do
+	$iptables -t mangle -A INPUT -p ${pair%:*} --dport ${pair#*:} -j MARK --set-mark $MARK_CONST
+	$iptables -t mangle -A OUTPUT -p ${pair%:*} --sport ${pair#*:} -j MARK --set-mark $MARK_CONST
+    done
+}

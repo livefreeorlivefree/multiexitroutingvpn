@@ -1,0 +1,39 @@
+#!/bin/bash
+
+MODULE_LIST=()
+
+function dependencies_register_module()
+{
+    MODULE_LIST+=($1)
+}
+
+function dependencies_depends()
+{
+    for mod in ${MODULE_LIST[@]}
+    do
+        if [[ $mod == $1 ]]
+        then
+            return 0
+        fi
+    done
+
+    bootstrap_load_module $1
+
+    if [[ $? == 0 ]]
+    then
+        return 0
+    fi
+
+    echo "Dependency unmet: $1 is not loaded"
+    echo "At:"
+    for key in ${!BASH_LINENO[@]}
+    do
+        if [[ $key -gt 0 ]]
+        then
+            echo -e "${key} \t ${BASH_SOURCE[$key]} -> ${FUNCNAME[$key]}():${BASH_LINENO[$key - 1]}"
+        fi
+    done
+    exit 2
+}
+
+dependencies_register_module "dependencies"

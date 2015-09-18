@@ -1,0 +1,119 @@
+#!/bin/bash
+
+dependencies_depends "dependencies"
+dependencies_register_module "routes"
+
+# get all tunnel interfaces
+function routes_get_interfaces
+{
+    interfaces=`$ifconfig | grep tun | awk '{print $1}'`
+}
+
+# delete all default routes
+function routes_clean_routes
+{
+    routes_get_interfaces
+
+    for ifs in $interfaces
+    do
+        $ip route del 0.0.0.0/1 dev $ifs 2>/dev/null
+	    delete_gw=`$ip route | grep '128.0.0.0/1' | grep "dev $ifs"`
+        if [[ $delete_gw != '' ]]
+        then
+            $ip route del $delete_gw
+        fi
+    done
+}
+
+# does table exist?
+function routes_table_exists()
+{
+    count=`cat /etc/iproute2/rt_tables | grep -c $1`
+    if [[ $count -lt 1 ]]
+    then
+	newid=`expr \`cat /etc/iproute2/rt_tables | awk '{print $1}' | sort | grep -vE ^25.$ | grep -v '#' | tail -n 1\` + 1`
+	if [[ $newid < 250 ]]
+	then
+	    echo "$newid $1" >> /etc/iproute2/rt_tables
+	else
+	    echo "Your routing tables are too full. See /etc/iproute2/rt_tables."
+	    exit 255
+	fi
+    fi
+}
+
+# copy routes to table
+function routes_copy_route()
+{
+    FROM=$1
+    TO=$2
+    routes_table_exists $TO
+    $ip route flush table $TO
+    $ip route show table $FROM | sort | while read ROUTE
+    do
+	$ip route add table $TO $ROUTE
+    done
+}
+
+
+# setup simple balanced gateways
+function routes_setup_gateways_simple
+{
+    $iptables -t nat -F POSTROUTING
+    for ifs in $interfaces
+    do
+	defaultGW=`echo "$defaultGW nexthop dev $ifs weight 1 "`
+        $iptables -t nat -A POSTROUTING -o $ifs -j MASQUERADE
+    done
+}
+
+
+# tests speed of the tunnels and sorts them by throughput
+function routes_setup_gateways_fast()
+{
+    if [[ $1 -ne 'cache' ]]
+    then
+	    rm .weight_cache
+    fi
+    $iptables -t nat -F POSTROUTING
+
+    touch .speeds
+
+    for ifs in $interfaces
+    do
+        $iptables -t nat -A POSTROUTING -o $ifs -j MASQUERADE
+        echo "Testing speed of interface $ifs"
+        $ip route del default 2>/dev/null
+        $ip route add default dev $ifs
+	    $ip route flush cache
+        ping ${PING_HOST} -c 1 > /dev/null
+
+        if [[ $? != 0 ]]
+        then
+    	    echo "Tunnel $ifs failure (no ping). Will not be included in gateway list."
+        else
+            download=`curl -s -k -o /dev/null -w %{speed_download} ${DOWNLOAD_TEST_FILE} | sed 's/,/./g' | xargs printf "%.*f" 0`
+            echo "$ifs|$download" >> .speeds
+	    fi
+
+	    $ip route del default dev $ifs
+    done
+
+    top=`cat .speeds | sed 's/|/\ /g' | awk '{print $2}' | sort -r | head -n 1`
+    for result in `cat .speeds`
+    do
+        result=`echo $result | sed 's/|/\ /g'`
+        interface=`echo $result | awk '{print $1}'`
+        speed=`echo $result | awk '{print $2}'`
+        weight=`echo "scale=0; ($speed * 100) / $top" | bc -l`
+        weight=`expr $weight + 1`
+        if [[ $weight -gt 254 ]]
+        then
+            weight=254 #cap.
+        fi
+        echo "$interface weight: $weight (higher is better)"
+        defaultGW=`echo "$defaultGW nexthop dev $interface weight $weight "`
+    done
+
+    rm .speeds
+}
