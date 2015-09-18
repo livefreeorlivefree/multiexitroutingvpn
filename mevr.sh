@@ -1,6 +1,17 @@
 #!/bin/bash
 
-. vars/./environment.sh
+if [[ -f vars/environment.sh ]]
+then
+    . vars/./environment.sh
+fi
+if [[ -f merv/environment.sh ]]
+then
+    . merv/./environment.sh
+fi
+if [[ -f environment.sh ]]
+then
+    . ./environment.sh
+fi
 
 # get all tunnel interfaces
 function get_interfaces 
