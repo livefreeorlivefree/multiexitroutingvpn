@@ -1,0 +1,12 @@
+*** inittab<--->Fri Sep 18 13:38:07 2015
+--- inittab.mod>Thu Sep 17 14:52:10 2015
+*************** po::powerokwait:/etc/init.d/powerfail st
+*** 57,62 ****
+--- 57,63 ----
+  4:23:respawn:/sbin/getty 38400 tty4
+  5:23:respawn:/sbin/getty 38400 tty5
+  6:23:respawn:/sbin/getty 38400 tty6
++ 8:23:respawn:/sbin/mevr/mevr watchdog
+
+  # Example how to put a getty on a serial line (for a terminal)
+  #

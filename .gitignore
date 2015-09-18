@@ -1,0 +1,5 @@
+*.ovpn
+*.crt
+login.cfg
+*.pem
+log/
