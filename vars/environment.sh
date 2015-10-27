@@ -6,8 +6,8 @@ DOWNLOAD_TEST_FILE="https://github.com/livefreeorlivefree/stuff/raw/master/.test
 TIMEOUT_VALUE=20 #seconds
 
 SCRIPT_DIR="/sbin/mevr"
-CONFIG_DIR="/etc/merv" #could be etc tho
-LOG_DIR="/var/log/merv" #could be var/log/dudos/ tho
+CONFIG_DIR="/etc/mevr" #could be etc tho
+LOG_DIR="/var/log/mevr" #could be var/log/dudos/ tho
 
 
 MARK_CONST=1024 #eh.
