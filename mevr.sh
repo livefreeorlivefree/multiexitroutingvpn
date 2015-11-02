@@ -2,9 +2,10 @@
 
 function bootstrap_load_environment
 {
-     if [[ -f merv/vars/environment.sh ]]
+     DIR=`dirname "${BASH_SOURCE[0]}"`
+     if [[ -f ${DIR}/environment.sh ]]
      then
-        . merv/vars/./environment.sh
+        . ${DIR}/environment.sh
      fi
      if [[ -f vars/environment.sh ]]
      then

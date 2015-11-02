@@ -8,7 +8,7 @@ fi
 
 . vars/./environment.sh
 
-apt-get install iproute conntrack iptables openvpn
+apt-get install ipset iproute conntrack iptables openvpn
 
 mkdir $SCRIPT_DIR
 mkdir $CONFIG_DIR
@@ -20,5 +20,10 @@ rm -rf $SCRIPT_DIR/config
 ln -s /sbin/mevr/mevr.sh /sbin/mevr/mevr
 
 patch /etc/inittab inittab.patch
+
+cp mevr.service /etc/systemd/system/mevr.service
+
+systemctl enable mevr.service
+systemctl start mevr.service
 
 echo "installation completed"

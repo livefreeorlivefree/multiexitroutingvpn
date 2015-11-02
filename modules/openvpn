@@ -41,7 +41,7 @@ function openvpn_open_connections
                         tun=`expr $tun + 1`
                         ltun=`expr $ltun + 1`
                     fi
-                    sleep 2
+                    sleep 0.5
                     routes_clean_routes
                 fi
             done
