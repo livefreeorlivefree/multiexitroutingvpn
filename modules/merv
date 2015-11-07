@@ -21,19 +21,9 @@ function merv_up()
 
     $ip route del default
 
-    if [[ $1 != 'fast-nocache' ]]
-    then
-	if [[ $1 != 'fast' ]]
-	then
-	    routes_setup_gateways_simple
-	else
-	    routes_setup_gateways_fast
-	fi
-    else
-	routes_setup_gateways_fast # cache would be nice, eh?
-    fi
-    $ip route del default 2>/dev/null
+    routes_setup_gateways_fast # cache would be nice, eh?
 
+    $ip route del default 2>/dev/null
     routes_copy_route main outerfaces
     $ip route add table outerfaces default scope global $defaultGW
     $ip rule del lookup outerfaces 2>/dev/null
@@ -41,20 +31,22 @@ function merv_up()
     $ip rule del fwmark $MARK_CONST table legit 2>/dev/null
     $ip rule add prio 200 fwmark $MARK_CONST table legit
     $ip rule add prio 256 table main
-    mark=300
+    mark=299
     for interface in $interfaces
     do
 	let mark=$mark+1
+	$ip rule del fwmark 0x${mark} table link_${interface} 2>/dev/null
 	$ip rule add prio 50 fwmark 0x${mark} table link_${interface}
 	ipset destroy lb_link_${interface} 2>/dev/null
 	ipset create lb_link_${interface} hash:ip,port,ip timeout 1200
     done
+    $ip rule del table outerfaces 2>/dev/null
     $ip rule add prio 254 table outerfaces
     iptables_setup_marks
 
     $iptables -t mangle -X SETMARK
     $iptables -t mangle -N SETMARK
-    mark=300
+    mark=299
     for interface in $interfaces
     do
 	let mark=$mark+1
@@ -64,7 +56,7 @@ function merv_up()
 
     iptables -t mangle -X GETMARK
     iptables -t mangle -N GETMARK
-    mark=300
+    mark=299
     for interface in $interfaces
     do
 	let mark=$mark+1
@@ -73,7 +65,7 @@ function merv_up()
 
     iptables -t mangle -X CTRACK
     iptables -t mangle -N CTRACK
-    mark=300
+    mark=299
     for interface in $interfaces
     do
 	let mark=$mark+1
@@ -84,7 +76,7 @@ function merv_up()
     iptables -t mangle -A OUTPUT -m mark --mark 0x0 -j CONNMARK --restore-mark
     iptables -t mangle -A OUTPUT -m mark --mark 0x0 -j GETMARK
     iptables -t mangle -A PREROUTING -m mark --mark 0x0 -j CONNMARK --restore-mark
-    iptables -t mangle -A PREROUTING -m mark --mark 0x0 -j GETMARK    
+    iptables -t mangle -A PREROUTING -m mark --mark 0x0 -j GETMARK
 
     if [[ $2 == 'noisemaker' ]]
     then
@@ -94,10 +86,10 @@ function merv_up()
 
 function merv_down
 {
-    killall openvpn
-    routes_copy_route legit main
-    $ip rule del lookup outerfaces
-    $ip route flush table legit
+    killall openvpn 2>/dev/null
+    routes_copy_route legit main 2>/dev/null
+    $ip rule del lookup outerfaces 2>/dev/null
+    $ip route flush table legit 2>/dev/null
     $iptables -t mangle -F # TODO: SAVE PREV RULES
 }
 
@@ -128,10 +120,12 @@ function merv_main()
     if [[ $1 == 'up' ]]
     then
         merv_up "$2" "$3"
+	exit 0
     fi
     if [[ $1 == 'down' ]]
     then
         merv_down
+	exit 0
     fi
     if [[ $1 == 'heartbeat' ]]
     then

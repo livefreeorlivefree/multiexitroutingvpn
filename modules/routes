@@ -73,7 +73,7 @@ function routes_setup_gateways_fast()
 {
     for interface in $interfaces
     do
-	routes_table_exists link_${interface}
+	routes_copy_route main link_${interface}
 	ip route add default dev ${interface} table link_${interface}
     done
     
