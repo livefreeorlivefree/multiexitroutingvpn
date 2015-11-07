@@ -113,14 +113,12 @@ function merv_heartbeat()
     if [[ $openvpns -le 1 ]]
     then
         merv_cycle
-        exit 0
     fi
 
     ping -c 1 $PING_HOST > /dev/null
     if [[ $? -ne 0 ]]
     then
         merv_cycle
-        exit 0
     fi
 }
 
@@ -130,22 +128,18 @@ function merv_main()
     if [[ $1 == 'up' ]]
     then
         merv_up "$2" "$3"
-	exit 0
     fi
     if [[ $1 == 'down' ]]
     then
         merv_down
-        exit 0
     fi
     if [[ $1 == 'heartbeat' ]]
     then
         merv_heartbeat
-        exit 0
     fi
     if [[ $1 == 'cycle' ]]
     then
         merv_cycle
-        exit 0
     fi
     if [[ $1 == 'watchdog' ]]
     then
@@ -154,7 +148,6 @@ function merv_main()
 	    merv_heartbeat
 	    sleep 30
 	done
-	exit 0
     fi
     echo "Usage: ./mevr.sh up [fast|fast-nocache] [noisemaker]|down|heartbeat|cycle|watchdog"
     exit 254

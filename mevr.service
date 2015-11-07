@@ -1,0 +1,12 @@
+[Unit]
+Description=multi-exit routing (vpn)
+
+[Service]
+ExecStart=/sbin/mevr/mevr.sh watchdog
+ExecStop=/sbin/mevr/mevr.sh down
+RestartSec=10
+TimeoutStartSec=5min
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
